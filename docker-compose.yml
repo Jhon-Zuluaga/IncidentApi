@@ -4,7 +4,7 @@ services:
     container_name: incidentdb
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: incidentdb
     ports:
       - "5433:5432"
@@ -23,13 +23,13 @@ services:
       - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=incidentdb;Username=postgres;Password=postgres
-      - Jwt__Key=e5ed6032-51a7-48cd-b097-02c3192881f9
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=incidentdb;Username=postgres;Password=${POSTGRES_PASSWORD}
+      - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=IncidentAPI
       - Jwt__Audience=IncidentAPIUsers
       - Jwt__ExpirationMinutes=60
-      - Email__Username=jhonxyleh@gmail.com
-      - Email__Password=punw dfre nrnq oheg
+      - Email__Username=${EMAIL_USERNAME}
+      - Email__Password=${EMAIL_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
