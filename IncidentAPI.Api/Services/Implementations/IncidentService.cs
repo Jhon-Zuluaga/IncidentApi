@@ -3,6 +3,7 @@ using IncidentAPI.Api.Models;
 using IncidentAPI.Api.Repositories.Interfaces;
 using IncidentAPI.Api.Services.Interfaces;
 
+
 namespace IncidentAPI.Api.Services.Implementations;
 
 /*
@@ -80,12 +81,12 @@ public class IncidentService : IIncidentService
         // Verificar que el usuario existe
         var user = await _UserRepository.GetByIdAsync(dto.UserId);
         if (user == null)
-            throw new Exception($"No existe un usuario con id {dto.UserId}");
+            throw new BadRequestException($"No existe un usuario con id {dto.UserId}");
 
         // Verificar que la categoría existe
         var category = await _CategoryRepository.GetByIdAsync(dto.CategoryId);
         if (category == null)
-            throw new Exception($"No existe una categoría con id {dto.CategoryId}");
+            throw new BadRequestException($"No existe una categoría con id {dto.CategoryId}");
 
         // Crear entidad incident
         var incident = new Incident

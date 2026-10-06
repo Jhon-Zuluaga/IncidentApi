@@ -3,44 +3,49 @@ using System.Text.Json;
 
 namespace IncidentAPI.Api.Middleware;
 
-public class ErrorHandlingMiddleware
+public class ErrorHandlingMiddleware(
+    RequestDelegate next,
+    ILogger<ErrorHandlingMiddleware> logger,
+    IHostEnvironment env)
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
-
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-
-    }
-
     public async Task InvokeAsync(HttpContext context)
     {
         try
         {
-            await _next(context);
-        }
-        catch (Exception ex)
+            await next(context);
+        }catch(Exception) when (context.Response.HasStarted)
         {
-            _logger.LogError(ex, "Error no controlado: {Message}", ex.Message);
-            await HandleExceptionAsync(context, ex);
+            throw;
+        }
+        catch(AppException ex)
+        {
+            logger.LogWarning(ex, "Business error in {Path}", context.Request.Path);
+            await WriteResponseAsync(context, ex.StatusCode, ex.Message);
+        }
+        catch(Exception ex)
+        {
+            logger.LogError(ex, "Unhandled error in {Method} {Path}", 
+                context.Request.Method, context.Request.Path);
+
+            await WriteResponseAsync(
+                context,
+                StatusCodes.Status500InternalServerError,
+                "A server error occurred.",
+                env.IsDevelopment() ? ex.Message : null
+            );
         }
     }
 
-    private static async Task HandleExceptionAsync(HttpContext context, Exception ex)
+    private static Task WriteResponseAsync(
+            HttpContext context, int statusCode, string message, string? detail = null
+        )
     {
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-
-        var response = new
+        context.Response.StatusCode = statusCode;
+        return context.Response.WriteAsJsonAsync(new
         {
-            status = context.Response.StatusCode,
-            message = "Ocurrio un error en el servidor",
-            detail = ex.Message
-        };
-
-        var json = JsonSerializer.Serialize(response);
-        await context.Response.WriteAsJsonAsync(json);
+            status = statusCode,
+            message,
+            detail
+        });
     }
 }
