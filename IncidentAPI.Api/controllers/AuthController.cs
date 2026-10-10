@@ -2,6 +2,7 @@ using IncidentAPI.Api.Repositories.Interfaces;
 using IncidentAPI.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Controlador encargado de la autenticación de usuarios (Login, logout, reset y forgot password)
@@ -15,6 +16,7 @@ public class AuthController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
     private readonly IConfiguration _config;
+    private readonly ILogger<AuthController> _logger;
 
     /// <summary>
     /// Constructor del controlador de autenticación.
@@ -22,13 +24,15 @@ public class AuthController : ControllerBase
     /// <param name="userService">Servicio para validar usuarios</param>
     /// <param name="jwtService">Servicio para generar tokens JWT</param>
     /// <param name="config">Configuración de la aplicación</param>
-    public AuthController(IUserService userService, IJwtService jwtService, IEmailService emailService, IUserRepository userRepository, IConfiguration config)
+    /// <param name="logger">Servicio de logging</param>
+    public AuthController(IUserService userService, IJwtService jwtService, IEmailService emailService, IUserRepository userRepository, IConfiguration config, ILogger<AuthController> logger)
     {
         _userService = userService;
         _jwtService = jwtService;
         _emailService = emailService;
         _userRepository = userRepository;
         _config = config;
+        _logger = logger;
     }
 
     /// <summary>
@@ -115,7 +119,7 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error enviando correo: {ex.Message}");
+            _logger.LogError(ex, "Error enviando correo de recuperación a {Email}", dto.Email);
         }
 
         return Ok (new {message = "Si el correo existe recibirás un email con instrucciones."});
