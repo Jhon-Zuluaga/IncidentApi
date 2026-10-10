@@ -3,6 +3,11 @@ using IncidentAPI.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Cryptography;
+using System.Text;
+
+
 
 /// <summary>
 /// Controlador encargado de la autenticación de usuarios (Login, logout, reset y forgot password)
@@ -44,6 +49,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Unauthorized si las credenciales son inválidas</response>
     /// </returns>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {   
         //Validar credenciales del usuario
@@ -96,6 +102,7 @@ public class AuthController : ControllerBase
     /// </returns>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         var user = await _userRepository.GetByEmailAsync(dto.Email);
@@ -104,8 +111,8 @@ public class AuthController : ControllerBase
         if(user == null)
             return Ok(new {message = "Si el correo existe recibirás un email con instrucciones"});
 
-        // Generar token de 6 digitos y expiración
-        var token = new Random().Next(100000, 999999).ToString();
+        // Generar token de 6 digitos criptográficamente seguro
+        var token = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         // Guardar token y expiración
         user.ResetToken = token;
@@ -134,12 +141,18 @@ public class AuthController : ControllerBase
     /// </returns>
     [HttpPost("reset-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         var user = await _userRepository.GetByEmailAsync(dto.Email);
 
+        var tokenMatches = user?.ResetToken != null && 
+            CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(dto.Token),
+                Encoding.UTF8.GetBytes(user.ResetToken));
+
         // Validar token y expiración
-        if(user == null || user.ResetToken != dto.Token || user.ResetTokenExpiry < DateTime.UtcNow)
+        if(user == null || !tokenMatches || user.ResetTokenExpiry < DateTime.UtcNow)
             return BadRequest(new {message = "Token inválido o expirado"});
         
         // Actualizar contraseña y limpiar token

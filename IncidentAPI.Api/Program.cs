@@ -8,6 +8,8 @@ using IncidentAPI.Api.Services.Interfaces;
 using IncidentAPI.Api.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 
 
@@ -127,6 +129,19 @@ builder.Services.AddCors(options =>
 });
 
 
+// Rate limiting para endpoints de autenticacion sensibles
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+});
+
 var app = builder.Build();
 
 // Activa Middleware global de errores
@@ -135,6 +150,8 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 
 // CORS Evitar errores
 app.UseCors("AllowFrontend");
+
+app.UseRateLimiter();
 
 // Activa Swagger solo en entorno desarrollo
 // En produccion no se expone a la documentación por seguridad
