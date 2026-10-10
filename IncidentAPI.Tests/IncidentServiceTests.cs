@@ -3,6 +3,7 @@ using IncidentAPI.Api.DTOs.Incident;
 using IncidentAPI.Api.Models;
 using IncidentAPI.Api.Repositories.Interfaces;
 using IncidentAPI.Api.Services.Implementations;
+using Microsoft.Extensions.Logging;
 
 namespace IncidentAPI.Tests;
 
@@ -13,6 +14,7 @@ public class IncidentServiceTests
     private readonly Mock<ICategoryRepository> _mockCategoryRepo;
     private readonly Mock<IEmailService> _mockEmailService;
     private readonly IncidentService _service;
+    private readonly Mock<ILogger<IncidentService>> _mockLogger;
 
     public IncidentServiceTests()
     {
@@ -20,12 +22,14 @@ public class IncidentServiceTests
         _mockUserRepo     = new Mock<IUserRepository>();
         _mockCategoryRepo = new Mock<ICategoryRepository>();
         _mockEmailService = new Mock<IEmailService>();
+        _mockLogger = new Mock<ILogger<IncidentService>>();
 
         _service = new IncidentService(
             _mockRepo.Object,
             _mockUserRepo.Object,
             _mockCategoryRepo.Object,
-            _mockEmailService.Object
+            _mockEmailService.Object,
+            _mockLogger.Object
         );
     }
 
