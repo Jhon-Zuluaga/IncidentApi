@@ -7,5 +7,6 @@ public class AttachmentDto
     public long FileSize { get; set; }
     public DateTime UploadedAt { get; set; }
     public string FileUrl {get; set; } = string.Empty; // URL para descargar el archivo
+    public string StoredFileName { get; set; } = string.Empty; // Nombre fisico en disco.
     public int IncidentId { get; set; }
 }

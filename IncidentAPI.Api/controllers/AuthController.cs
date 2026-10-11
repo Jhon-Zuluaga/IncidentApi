@@ -132,7 +132,7 @@ public class AuthController : ControllerBase
         return Ok (new {message = "Si el correo existe recibirás un email con instrucciones."});
     }
 
-     /// <summary>
+    /// <summary>
     /// Permite establecer la contraseña usando token válido
     /// </summary>
     /// <param name="dto">Contiene email, token y nueva contraseña</param>

@@ -18,3 +18,8 @@ public class NotFoundException(string message)
 
 public class BadRequestException(string message)
     : AppException(message, StatusCodes.Status400BadRequest);
+
+// <summary> The user is authenticated but does not have permission to access this resource
+
+public class ForbiddenException(string message)
+    : AppException(message, StatusCodes.Status403Forbidden);

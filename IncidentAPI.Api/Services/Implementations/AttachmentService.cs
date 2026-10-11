@@ -1,4 +1,5 @@
 
+using IncidentAPI.Api.Models;
 using IncidentAPI.Api.Repositories.Interfaces;
 
 public class AttachmentService : IAttachmentService
@@ -21,23 +22,38 @@ public class AttachmentService : IAttachmentService
         _env = env;
     }
 
-    public async Task<IEnumerable<AttachmentDto>> GetAllByIncidentIdAsync (int incidentId)
+    public async Task<IEnumerable<AttachmentDto>> GetAllByIncidentIdAsync (int incidentId, int userId)
     {
+        var incident = await _incidentRepository.GetByIdAsync(incidentId);
+        if(incident is null)
+            throw new NotFoundException($"Incident with ID {incidentId} not found.");
+        
+        if(incident.UserId != userId)
+            throw new ForbiddenException("You do not have permission to view the attachments for this incident.");
+
         var attachments = await _attachmentRepository.GetAllByIncidentIdAsync(incidentId);
         return attachments. Select(a => ToDto(a));
     }
 
-    public async Task<AttachmentDto?> GetByIdAsync(int id)
+    public async Task<AttachmentDto?> GetByIdAsync(int id, int userId)
     {
         var attachment = await _attachmentRepository.GetByIdAsync(id);
-        return attachment is null ? null : ToDto(attachment);
+        if(attachment is null) return null;
+
+        if(attachment.Incident.UserId != userId)
+            throw new ForbiddenException("You do not have permission to access this attachment.");
+        
+        return ToDto(attachment);
     }
 
-    public async Task<AttachmentDto?> UploadAsync(int incidentId, CreateAttachmentDto dto, string baseUrl)
+    public async Task<AttachmentDto?> UploadAsync(int incidentId, CreateAttachmentDto dto, string baseUrl, int userId)
     {
         // Verificar que el incidente existe
         var incident = await _incidentRepository.GetByIdAsync(incidentId);
         if(incident is null) return null;
+
+        if(incident.UserId != userId)
+            throw new ForbiddenException("You do not have permission to upload files to this incident.");
 
         // Validar tipo de archivo
         if(!_allowedTyped.Contains(dto.File.ContentType)) return null;
@@ -50,8 +66,7 @@ public class AttachmentService : IAttachmentService
         var storedFileName = $"{Guid.NewGuid()}{extension}";
 
         // Crear la carpeta uploads si no existe
-        var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-        var uploadsFolder = Path.Combine(webRoot, "uploads");
+        var uploadsFolder = Path.Combine(_env.ContentRootPath, "App_Data", "uploads");
         Directory.CreateDirectory(uploadsFolder);
 
         // Guardar archivo en disco
@@ -77,10 +92,13 @@ public class AttachmentService : IAttachmentService
     }
 
     
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, int userId)
     {
         var attachment = await _attachmentRepository.GetByIdAsync(id);
         if(attachment is null) return false;
+
+        if(attachment.Incident.UserId != userId)
+            throw new ForbiddenException("You do not have permission to delete this attachment.");
 
         // Eliminar el archivo fisico del disco.
         if(File.Exists(attachment.FilePath))
@@ -99,9 +117,10 @@ public class AttachmentService : IAttachmentService
             FileSize = attachment.FileSize,
             UploadedAt = attachment.UploadedAt,
             IncidentId = attachment.IncidentId,
+            StoredFileName = attachment.StoredFileName,
             FileUrl = string.IsNullOrEmpty(baseUrl)
                 ? attachment.StoredFileName
-                : $"{baseUrl}/uploads/{attachment.StoredFileName}"
+                : $"{baseUrl}/api/attachment/{attachment.Id}/download"
         };
     }
 }
