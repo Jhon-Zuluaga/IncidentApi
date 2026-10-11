@@ -12,16 +12,16 @@ public class CreateIncidentDto
 {
     [Required]
     [MinLength(3, ErrorMessage = "El titulo debe tener al menos 3 caracteres")]
-    [MaxLength(100, ErrorMessage = "El titulo no puede tener más de 100 caracteres")]
-    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$",
+    [MaxLength(150, ErrorMessage = "El titulo no puede tener más de 150 caracteres")]
+    [RegularExpression(ValidationPatterns.FreeText,
         ErrorMessage = "El título solo puede contener letras")]
     public string Title { get; set; } = string.Empty;
 
     [Required]
     [MinLength(3, ErrorMessage = "La descripción debe tener al menos 3 caracteres")]
-    [MaxLength(100, ErrorMessage = "La descripción no puede tener más de 200 caracteres")]
-    [RegularExpression(@"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$",
-        ErrorMessage = "La descripción solo puede contener letras")]
+    [MaxLength(2000, ErrorMessage = "La descripción no puede tener más de 2000 caracteres")]
+    [RegularExpression(ValidationPatterns.FreeText,
+        ErrorMessage = "La descripción contiene caracteres no permitidos")]
     public string Description { get; set; } = string.Empty;
 
     [Required]
