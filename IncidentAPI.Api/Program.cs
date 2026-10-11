@@ -8,6 +8,8 @@ using IncidentAPI.Api.Services.Interfaces;
 using IncidentAPI.Api.Services.Implementations;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Text;
 
 
@@ -22,6 +24,18 @@ Log.Logger = new LoggerConfiguration()
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddOptions<JwtOptions>()
+    .Bind(builder.Configuration.GetSection(JwtOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+
+builder.Services
+    .AddOptions<EmailOptions>()
+    .Bind(builder.Configuration.GetSection(EmailOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 // Reemplaza y activa el sistema de logs por defecto
 builder.Host.UseSerilog();
@@ -80,8 +94,9 @@ builder.Services.AddScoped<IAttachmentService, AttachmentService>();
 
 // ── JWT ──────────────────────────────────────────────────────────
 
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("Jwt:Key no está configurada");
+var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+var jwtOptions = jwtSection.Get<JwtOptions>()
+    ?? throw new InvalidOperationException("La sección JWT no está configurada.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         .AddJwtBearer(options =>
@@ -92,9 +107,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                ValidAudience = builder.Configuration["Jwt:Audience"],
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                ValidIssuer = jwtOptions.Issuer,
+                ValidAudience = jwtOptions.Audience,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
                 ClockSkew = TimeSpan.Zero
             };
 
@@ -127,6 +142,19 @@ builder.Services.AddCors(options =>
 });
 
 
+// Rate limiting para endpoints de autenticacion sensibles
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+});
+
 var app = builder.Build();
 
 // Activa Middleware global de errores
@@ -135,6 +163,8 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 
 // CORS Evitar errores
 app.UseCors("AllowFrontend");
+
+app.UseRateLimiter();
 
 // Activa Swagger solo en entorno desarrollo
 // En produccion no se expone a la documentación por seguridad

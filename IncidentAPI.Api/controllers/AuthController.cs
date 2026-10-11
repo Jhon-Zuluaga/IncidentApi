@@ -2,6 +2,13 @@ using IncidentAPI.Api.Repositories.Interfaces;
 using IncidentAPI.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
+using System.Text;
+
+
 
 /// <summary>
 /// Controlador encargado de la autenticación de usuarios (Login, logout, reset y forgot password)
@@ -14,7 +21,9 @@ public class AuthController : ControllerBase
     private readonly IJwtService _jwtService;
     private readonly IEmailService _emailService;
     private readonly IUserRepository _userRepository;
-    private readonly IConfiguration _config;
+    private readonly JwtOptions _jwtOptions;
+    private readonly ILogger<AuthController> _logger;
+    private readonly IWebHostEnvironment _env;
 
     /// <summary>
     /// Constructor del controlador de autenticación.
@@ -22,13 +31,16 @@ public class AuthController : ControllerBase
     /// <param name="userService">Servicio para validar usuarios</param>
     /// <param name="jwtService">Servicio para generar tokens JWT</param>
     /// <param name="config">Configuración de la aplicación</param>
-    public AuthController(IUserService userService, IJwtService jwtService, IEmailService emailService, IUserRepository userRepository, IConfiguration config)
+    /// <param name="logger">Servicio de logging</param>
+    public AuthController(IUserService userService, IJwtService jwtService, IEmailService emailService, IUserRepository userRepository, IOptions<JwtOptions> jwtOptions, ILogger<AuthController> logger, IWebHostEnvironment env)
     {
-        _userService = userService;
+       _userService = userService;
         _jwtService = jwtService;
         _emailService = emailService;
         _userRepository = userRepository;
-        _config = config;
+        _jwtOptions = jwtOptions.Value;
+        _logger = logger;
+        _env = env;
     }
 
     /// <summary>
@@ -40,6 +52,7 @@ public class AuthController : ControllerBase
     /// <response code="401">Unauthorized si las credenciales son inválidas</response>
     /// </returns>
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {   
         //Validar credenciales del usuario
@@ -52,16 +65,13 @@ public class AuthController : ControllerBase
         // Genera un token JWT
         var token = _jwtService.GenerateToken(user);
 
-        // Obtener tiempo de expiración desde la configuración
-        var expMinutes = double.Parse(_config["Jwt:ExpirationMinutes"]!);
-
         // Guardar el token en una cookie segura
         Response.Cookies.Append("jwt", token, new CookieOptions
         {
             HttpOnly = true,       // Evitar acceso desde JavaScript
-            Secure = false,        // En local false, en producción true(HTTPS)
+            Secure = !_env.IsDevelopment(),        // En local false, en producción true(HTTPS)
             SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddMinutes(expMinutes)
+            Expires = DateTimeOffset.UtcNow.AddMinutes(_jwtOptions.ExpirationMinutes)
         });
 
         return Ok(new { message = "Login exitoso" });
@@ -92,6 +102,7 @@ public class AuthController : ControllerBase
     /// </returns>
     [HttpPost("forgot-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         var user = await _userRepository.GetByEmailAsync(dto.Email);
@@ -100,8 +111,8 @@ public class AuthController : ControllerBase
         if(user == null)
             return Ok(new {message = "Si el correo existe recibirás un email con instrucciones"});
 
-        // Generar token de 6 digitos y expiración
-        var token = new Random().Next(100000, 999999).ToString();
+        // Generar token de 6 digitos criptográficamente seguro
+        var token = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         // Guardar token y expiración
         user.ResetToken = token;
@@ -115,13 +126,13 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error enviando correo: {ex.Message}");
+            _logger.LogError(ex, "Error enviando correo de recuperación a {Email}", dto.Email);
         }
 
         return Ok (new {message = "Si el correo existe recibirás un email con instrucciones."});
     }
 
-     /// <summary>
+    /// <summary>
     /// Permite establecer la contraseña usando token válido
     /// </summary>
     /// <param name="dto">Contiene email, token y nueva contraseña</param>
@@ -130,12 +141,18 @@ public class AuthController : ControllerBase
     /// </returns>
     [HttpPost("reset-password")]
     [AllowAnonymous]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
         var user = await _userRepository.GetByEmailAsync(dto.Email);
 
+        var tokenMatches = user?.ResetToken != null && 
+            CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(dto.Token),
+                Encoding.UTF8.GetBytes(user.ResetToken));
+
         // Validar token y expiración
-        if(user == null || user.ResetToken != dto.Token || user.ResetTokenExpiry < DateTime.UtcNow)
+        if(user == null || !tokenMatches || user.ResetTokenExpiry < DateTime.UtcNow)
             return BadRequest(new {message = "Token inválido o expirado"});
         
         // Actualizar contraseña y limpiar token
