@@ -11,7 +11,9 @@ namespace IncidentAPI.Api.DTOs.Category;
 public class CreateCategoryDto
 {
     [Required]
-    [RegularExpression(@"^[a-zA-Z ]+$",
-        ErrorMessage = "El nombre no puede contener números ni caracteres especiales")]
+    [MinLength(2, ErrorMessage = "El nombre debe tener al menos 2 caracteres")]
+    [MaxLength(50, ErrorMessage = "El nombre no puede tener más de 50 caracteres")]
+    [RegularExpression(ValidationPatterns.CategoryName,
+        ErrorMessage = "El nombre contiene caracteres no permitidos")]
     public string Name { get; set; } = string.Empty;
 }
