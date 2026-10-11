@@ -21,7 +21,9 @@ public class AttachmentRepository : IAttachmentRepository
 
     public async Task<Attachment?> GetByIdAsync(int id)
     {
-        return await _context.Attachments.FindAsync(id);
+        return await _context.Attachments
+            .Include(a => a.Incident)
+            .FirstOrDefaultAsync(a => a.Id == id);
     }
 
     public async Task<Attachment> CreateAsync(Attachment attachment)
