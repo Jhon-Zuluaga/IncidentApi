@@ -3,28 +3,29 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using IncidentAPI.Api.Models;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 // Servicio que implementa la generación tokens JWT
 public class JwtService : IJwtService
 {
-    private readonly IConfiguration _config;
+    private readonly JwtOptions _jwtOptions;
 
-    public JwtService(IConfiguration config)
+    public JwtService(IOptions<JwtOptions> jwtOptions)
     {
-        _config = config;
+        _jwtOptions = jwtOptions.Value;
     }
 
-     public string GenerateToken(User user)
-    {   
-        // Obtener la clave secreta desde configuración
+    public string GenerateToken(User user)
+    {
+        // Obtener clave secreta desde configuración
         var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+            Encoding.UTF8.GetBytes(_jwtOptions.Key));
 
-        // Credenciales para firmar el token
+        // Credenciales para firmar token
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-        // Información que se guarda dentro del token (claims)
+        // Informacion se guarda dentro del token (claims)
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -33,17 +34,16 @@ public class JwtService : IJwtService
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        // Tiempo de expiración del token
-        var expiration = DateTime.UtcNow.AddMinutes(
-            double.Parse(_config["Jwt:ExpirationMinutes"]!));
+        // Tiempo expiracion del token
+        var expiration = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpirationMinutes);
 
-        // Crear el token JWT con toda la información
+        // Crear token JWT con toda la informacion
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],      // Quien lo emite
-            audience: _config["Jwt:Audience"],  // Para quien es
-            claims: claims,                     // datos del usuario
-            expires: expiration,                // expiración
-            signingCredentials: credentials     // firma
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
+            claims: claims,
+            expires: expiration,
+            signingCredentials: credentials
         );
 
         // Convertir el token a string para enviarlo

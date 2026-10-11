@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using Microsoft.Extensions.Options;
 
 /*
     Este service:
@@ -13,11 +14,11 @@ using System.Net.Mail;
 // Implementacion del servicio de correos
 public class EmailService : IEmailService
 {
-    private readonly IConfiguration _config;
+    private readonly EmailOptions _emailOptions;
 
-    public EmailService(IConfiguration config)
+    public EmailService(IOptions<EmailOptions> emailOptions)
     {
-        _config = config;
+        _emailOptions = emailOptions.Value;
     }
     
     // Crear y configurar el cliente SMTP
@@ -26,16 +27,16 @@ public class EmailService : IEmailService
         return new SmtpClient
         {
             // Servidor SMTP(Gmail)
-            Host = _config["Email:Host"]!,
-            Port = int.Parse(_config["Email:Port"]!),
+            Host = _emailOptions.Host,
+            Port = _emailOptions.Port,
 
             // Habilita conexion segura (SSL)
             EnableSsl = true,
 
             // Credenciales del correo emisor
             Credentials = new NetworkCredential(
-                _config["Email:Username"],
-                _config["Email:Password"]
+                _emailOptions.Username,
+                _emailOptions.Password
             )
         };
     }
@@ -46,7 +47,7 @@ public class EmailService : IEmailService
         var mail = new MailMessage();
 
         // Remitente (quien envia el correo)
-        mail.From = new MailAddress(_config["Email:From"]!, _config["Email:DisplayName"]);
+        mail.From = new MailAddress(_emailOptions.From, _emailOptions.DisplayName);
 
         // Destinatario
         mail.To.Add(new MailAddress(toEmail, toName));
