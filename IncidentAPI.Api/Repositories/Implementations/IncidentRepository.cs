@@ -13,19 +13,13 @@ namespace IncidentAPI.Api.Repositories.Implementations;
 */
 
 // Implementación del repositorio de incidentes usando Entity Framework
-public class IncidentRepository : IIncidentRepository
+public class IncidentRepository(AppDbContext context) : IIncidentRepository
 {
-    private readonly AppDbContext _context;
-
-    public IncidentRepository(AppDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<IEnumerable<Incident>> GetAllAsync()
     {
         // Obtener incidentes con sus relaciones
-        return await _context.Incidents
+        return await context.Incidents
             .Include(i => i.User)
             .Include(i => i.Category)
             .Include(i => i.Comments)
@@ -35,7 +29,7 @@ public class IncidentRepository : IIncidentRepository
     public async Task<Incident?> GetByIdAsync(int id)
     {
         // Buscar incidente por id con relaciones
-        return await _context.Incidents
+        return await context.Incidents
             .Include(i => i.User)
             .Include(i => i.Category)
             .Include(i => i.Comments)
@@ -45,15 +39,15 @@ public class IncidentRepository : IIncidentRepository
     public async Task<Incident> CreateAsync(Incident incident)
     {
         // Agregar nuevo incidente
-        _context.Incidents.Add(incident);
-        await _context.SaveChangesAsync();
+        context.Incidents.Add(incident);
+        await context.SaveChangesAsync();
         return incident;
     }
 
     public async Task<Incident?> UpdateAsync(int id, Incident incident)
     {
         // Buscar incidente existente
-        var existing = await _context.Incidents.FindAsync(id);
+        var existing = await context.Incidents.FindAsync(id);
         if (existing == null) return null;
 
         // Actualizar datos si se envian
@@ -62,19 +56,19 @@ public class IncidentRepository : IIncidentRepository
         existing.Status = incident.Status ?? existing.Status;
         existing.CategoryId = incident.CategoryId != 0 ? incident.CategoryId : existing.CategoryId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return existing;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
         // Buscar incidente
-        var existing = await _context.Incidents.FindAsync(id);
+        var existing = await context.Incidents.FindAsync(id);
         if (existing == null) return false;
 
         // Eliminar incidente
-        _context.Incidents.Remove(existing);
-        await _context.SaveChangesAsync();
+        context.Incidents.Remove(existing);
+        await context.SaveChangesAsync();
         return true;
     }
 

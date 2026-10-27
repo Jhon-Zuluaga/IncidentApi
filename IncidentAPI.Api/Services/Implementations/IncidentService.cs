@@ -16,32 +16,18 @@ namespace IncidentAPI.Api.Services.Implementations;
 */
 
 // Implementación de la logica de negocio para incidentes
-public class IncidentService : IIncidentService
+public class IncidentService(
+    IIncidentRepository incidentRepository,
+    IUserRepository userRepository,
+    ICategoryRepository categoryRepository,
+    IEmailService emailService,
+    ILogger<IncidentService> logger) : IIncidentService
 {
-    private readonly IIncidentRepository _IncidentRepository;
-    private readonly IUserRepository _UserRepository;
-    private readonly ICategoryRepository _CategoryRepository;
-    private readonly IEmailService _EmailService;
-    private readonly ILogger<IncidentService> _logger;
-
-    public IncidentService(
-       IIncidentRepository incidentRepository,
-       IUserRepository userRepository,
-       ICategoryRepository categoryRepository,
-       IEmailService emailService,
-       ILogger<IncidentService> logger)
-    {
-        _IncidentRepository = incidentRepository;
-        _UserRepository = userRepository;
-        _CategoryRepository = categoryRepository;
-        _EmailService = emailService;
-        _logger = logger;
-    }
 
     public async Task<IEnumerable<IncidentDto>> GetAllAsync()
     {
         // Obtener incidentes
-        var incidents = await _IncidentRepository.GetAllAsync();
+        var incidents = await incidentRepository.GetAllAsync();
 
         // Convertir a DTO
         return incidents.Select(i => new IncidentDto
@@ -61,7 +47,7 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDto?> GetByIdAsync(int id)
     {
         // Buscar incidente por id
-        var Incident = await _IncidentRepository.GetByIdAsync(id);
+        var Incident = await incidentRepository.GetByIdAsync(id);
         if (Incident == null) return null;
 
         // Mapear a DTO
@@ -82,12 +68,12 @@ public class IncidentService : IIncidentService
     public async Task<IncidentDto> CreateAsync(CreateIncidentDto dto)
     {
         // Verificar que el usuario existe
-        var user = await _UserRepository.GetByIdAsync(dto.UserId);
+        var user = await userRepository.GetByIdAsync(dto.UserId);
         if (user == null)
             throw new BadRequestException($"No existe un usuario con id {dto.UserId}");
 
         // Verificar que la categoría existe
-        var category = await _CategoryRepository.GetByIdAsync(dto.CategoryId);
+        var category = await categoryRepository.GetByIdAsync(dto.CategoryId);
         if (category == null)
             throw new BadRequestException($"No existe una categoría con id {dto.CategoryId}");
 
@@ -102,19 +88,19 @@ public class IncidentService : IIncidentService
         };
 
         // Guardar en BD
-        var created = await _IncidentRepository.CreateAsync(incident);
+        var created = await incidentRepository.CreateAsync(incident);
 
         // Obtener con relaciones completas
-        var full = await _IncidentRepository.GetByIdAsync(created.Id);
+        var full = await incidentRepository.GetByIdAsync(created.Id);
 
         try
         {
             // Enviar correo de notificacion
-            await _EmailService.SendIncidentCreatedAsync(user.Email, user.Name, dto.Title);
+            await emailService.SendIncidentCreatedAsync(user.Email, user.Name, dto.Title);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error enviando notificación de incidente creado a  {Email} para el incidente {IncidentId}", 
+            logger.LogError(ex, "Error enviando notificación de incidente creado a  {Email} para el incidente {IncidentId}", 
             user.Email, created.Id);
         }
 
@@ -145,11 +131,11 @@ public class IncidentService : IIncidentService
         };
 
         // Actualizar en BD
-        var updated = await _IncidentRepository.UpdateAsync(id, incident);
+        var updated = await incidentRepository.UpdateAsync(id, incident);
         if (updated == null) return null;
 
         // Obtener completo
-        var full = await _IncidentRepository.GetByIdAsync(updated.Id);
+        var full = await incidentRepository.GetByIdAsync(updated.Id);
 
         // Retornar DTO
         return new IncidentDto
@@ -169,6 +155,6 @@ public class IncidentService : IIncidentService
     public async Task<bool> DeleteAsync(int id)
     {
         // Eliminar incidente
-        return await _IncidentRepository.DeleteAsync(id);
+        return await incidentRepository.DeleteAsync(id);
     }
 }

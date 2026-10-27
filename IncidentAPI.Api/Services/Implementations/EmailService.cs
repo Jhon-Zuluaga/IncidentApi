@@ -12,14 +12,9 @@ using Microsoft.Extensions.Options;
 */
 
 // Implementacion del servicio de correos
-public class EmailService : IEmailService
+public class EmailService(IOptions<EmailOptions> emailOptions) : IEmailService
 {
-    private readonly EmailOptions _emailOptions;
-
-    public EmailService(IOptions<EmailOptions> emailOptions)
-    {
-        _emailOptions = emailOptions.Value;
-    }
+    private readonly EmailOptions _emailOptions = emailOptions.Value;
     
     // Crear y configurar el cliente SMTP
     private SmtpClient CreateSmtpClient()

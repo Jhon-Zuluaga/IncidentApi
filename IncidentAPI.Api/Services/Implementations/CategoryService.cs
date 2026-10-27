@@ -13,19 +13,12 @@ namespace IncidentAPI.Api.Services.Implementations;
 */
 
 // Implementación de la logica de negocio para categorias
-public class CategoryService : ICategoryService
+public class CategoryService(ICategoryRepository categoryRepository) : ICategoryService
 {
-    private readonly ICategoryRepository _CategoryRepository;
-
-    public CategoryService(ICategoryRepository CategoryRepository)
-    {
-        _CategoryRepository = CategoryRepository;
-    }
-
     public async Task<IEnumerable<CategoryDto>> GetAllAsync()
     {
         // Obtener categorias
-        var categories = await _CategoryRepository.GetAllAsync();
+        var categories = await categoryRepository.GetAllAsync();
 
         // Convertir a DTO
         return categories.Select(c => new CategoryDto
@@ -38,7 +31,7 @@ public class CategoryService : ICategoryService
     public async Task<CategoryDto?> GetByIdAsync(int id)
     {
         // Buscar categoria por id
-        var category = await _CategoryRepository.GetByIdAsync(id);
+        var category = await categoryRepository.GetByIdAsync(id);
         if (category == null) return null;
 
         // Mapear a DTO
@@ -58,7 +51,7 @@ public class CategoryService : ICategoryService
         };
 
         // Guardar en BD
-        var created = await _CategoryRepository.CreateAsync(category);
+        var created = await categoryRepository.CreateAsync(category);
 
         // Retornar DTO
         return new CategoryDto
@@ -80,7 +73,7 @@ public class CategoryService : ICategoryService
         };
 
         // Actualizar en BD
-        var updated = await _CategoryRepository.UpdateAsync(id, category);
+        var updated = await categoryRepository.UpdateAsync(id, category);
         if (updated == null) return null;
 
         // Retornar DTO
@@ -94,6 +87,6 @@ public class CategoryService : ICategoryService
     public async Task<bool> DeleteAsync(int id)
     {
         // Eliminar categoria
-        return await _CategoryRepository.DeleteAsync(id);
+        return await categoryRepository.DeleteAsync(id);
     }
 }

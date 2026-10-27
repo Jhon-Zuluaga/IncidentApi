@@ -14,19 +14,13 @@ namespace IncidentAPI.Api.Services.Implementations;
 */
 
 // Implementación de la lógica de negocio para usuarios
-public class UserService : IUserService
+public class UserService(IUserRepository userRepository) : IUserService
 {
-    private readonly IUserRepository _userRepository;
-
-    public UserService(IUserRepository userRepository)
-    {
-        _userRepository = userRepository;
-    }
 
     public async Task<IEnumerable<UserDto>> GetAllAsync()
     {
         // Obtener usuarios desde el repositorio
-        var users = await _userRepository.GetAllAsync();
+        var users = await userRepository.GetAllAsync();
 
         // Convierte entidades (User) a DTOs
         return users.Select(u => new UserDto
@@ -40,7 +34,7 @@ public class UserService : IUserService
     public async Task<UserDto?> GetByIdAsync(int id)
     {
         // Buscar un usuario por id
-        var user = await _userRepository.GetByIdAsync(id);
+        var user = await userRepository.GetByIdAsync(id);
         if (user == null) return null;
 
         // Mapear a DTo 
@@ -64,7 +58,7 @@ public class UserService : IUserService
         };
 
         // Guardar en BD
-        var created = await _userRepository.CreateAsync(user);
+        var created = await userRepository.CreateAsync(user);
 
         // Retornar DTO
         return new UserDto
@@ -85,7 +79,7 @@ public class UserService : IUserService
         };
 
         // Actualizar en BD
-        var updated = await _userRepository.UpdateAsync(id, user);
+        var updated = await userRepository.UpdateAsync(id, user);
         if (updated == null) return null;
 
         // Retornar DTO actualizado
@@ -100,13 +94,13 @@ public class UserService : IUserService
     public async Task<bool> DeleteAsync(int id)
     {
         // Eliminar usuario
-        return await _userRepository.DeleteAsync(id); 
+        return await userRepository.DeleteAsync(id); 
     }
 
     public async Task<User?> ValidateCredentialsAsync(string email, string password)
     {
         // Buscar usuario por email
-        var user = await _userRepository.GetByEmailAsync(email);
+        var user = await userRepository.GetByEmailAsync(email);
         if (user == null) return null;
 
         // Verificar contraseña encriptada

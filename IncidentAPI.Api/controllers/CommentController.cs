@@ -8,17 +8,12 @@ namespace IncidentAPI.Api.Controllers;
 /// <summary>
 /// Gestión de Comentarios
 /// </summary>
+/// <param name="commentService">Servicio de comentarios</param>
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class CommentController : ControllerBase
+public class CommentController(ICommentService commentService) : ControllerBase
 {
-    private readonly ICommentService _CommentService;
-
-    public CommentController(ICommentService CommentService)
-    {
-        _CommentService = CommentService;
-    }
 
     /// <summary>
     /// Obtiene todos los comentarios de un incidente
@@ -30,7 +25,7 @@ public class CommentController : ControllerBase
     [HttpGet("incident/{incidentId}")]
     public async Task<IActionResult> GetAllByIncidentId(int incidentId)
     {
-        var comments = await _CommentService.GetAllByIncidentIdAsync(incidentId);
+        var comments = await commentService.GetAllByIncidentIdAsync(incidentId);
         if (!comments.Any()) return NotFound("No hay información suministrada");
         return Ok(comments);
     }
@@ -45,7 +40,7 @@ public class CommentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var comment = await _CommentService.GetByIdAsync(id);
+        var comment = await commentService.GetByIdAsync(id);
         if (comment == null) return NotFound($"Comentario con id {id} no encontrado");
         return Ok(comment);
     }
@@ -55,13 +50,13 @@ public class CommentController : ControllerBase
     /// </summary>
     /// <param name="dto">Datos del comentario a crear</param>
     /// <returns>Comentario creado</returns>
-    /// <response code="200"> Comentario creado correctamente</response>
+    /// <response code="201"> Comentario creado correctamente</response>
     /// <response code="400"> Datos inválidos</response>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCommentDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var created = await _CommentService.CreateAsync(dto);
+        var created = await commentService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -78,7 +73,7 @@ public class CommentController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCommentDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var updated = await _CommentService.UpdateAsync(id, dto);
+        var updated = await commentService.UpdateAsync(id, dto);
         if (updated == null) return NotFound($"Comentario con id {id} no encontrado");
         return Ok(updated);
     }
@@ -93,7 +88,7 @@ public class CommentController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _CommentService.DeleteAsync(id);
+        var deleted = await commentService.DeleteAsync(id);
         if (!deleted) return NotFound($"Comentario con id {id} no encontrado");
         return Ok($"Comentario con id {id} eliminado correctamente");
     }
