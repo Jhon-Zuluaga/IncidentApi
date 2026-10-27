@@ -13,19 +13,13 @@ namespace IncidentAPI.Api.Repositories.Implementations;
 */
 
 // Implementación del repositorio de comentarios usando Entity Framework
-public class CommentRepository : ICommentRepository
+public class CommentRepository(AppDbContext context) : ICommentRepository
 {
-    private readonly AppDbContext _context;
-
-    public CommentRepository(AppDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<IEnumerable<Comment>> GetAllByIncidentIdAsync(int incidentId)
     {
         // Obtener un comentario de un incidente especifico
-        return await _context.Comments
+        return await context.Comments
         .Where(c => c.IncidentId == incidentId)
         .ToListAsync();
     }
@@ -33,40 +27,40 @@ public class CommentRepository : ICommentRepository
     public async Task<Comment?> GetByIdAsync(int id)
     {
         // Buscar comentario por id
-        return await _context.Comments.FindAsync(id);
+        return await context.Comments.FindAsync(id);
     }
 
     public async Task<Comment> CreateAsync(Comment comment)
     {
         // Agregar nuevo comentario
-        _context.Comments.Add(comment);
-        await _context.SaveChangesAsync();
+        context.Comments.Add(comment);
+        await context.SaveChangesAsync();
         return comment;
     }
 
     public async Task<Comment?> UpdateAsync(int id, Comment comment)
     {
         // Buscar comentario existente
-        var existing = await _context.Comments.FindAsync(id);
+        var existing = await context.Comments.FindAsync(id);
         if (existing == null) return null;
 
         // Actualizar datos
         existing.Content = comment.Content ?? existing.Content;
         existing.Author = comment.Author ?? existing.Author;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return existing;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
         // Buscar comentario
-        var existing = await _context.Comments.FindAsync(id);
+        var existing = await context.Comments.FindAsync(id);
         if (existing == null) return false;
 
         // Eliminar comentario
-        _context.Comments.Remove(existing);
-        await _context.SaveChangesAsync();
+        context.Comments.Remove(existing);
+        await context.SaveChangesAsync();
         return true;
     }
 

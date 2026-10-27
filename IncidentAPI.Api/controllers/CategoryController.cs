@@ -8,17 +8,12 @@ namespace IncidentAPI.Api.Controllers;
 /// <summary>
 /// Gestión de Categorias
 /// </summary>
+/// <param name="categoryService">Servicio de categorias</param>
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class CategoryController : ControllerBase
+public class CategoryController(ICategoryService categoryService) : ControllerBase
 {
-    private readonly ICategoryService _CategoryService;
-
-    public CategoryController(ICategoryService CategoryService)
-    {
-        _CategoryService = CategoryService;
-    }
 
     /// <summary>
     /// Obtiene todas las categorias
@@ -29,7 +24,7 @@ public class CategoryController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var categories = await _CategoryService.GetAllAsync();
+        var categories = await categoryService.GetAllAsync();
         if (!categories.Any()) return NotFound("No hay información suministrada");
         return Ok(categories);
     }
@@ -44,7 +39,7 @@ public class CategoryController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var category = await _CategoryService.GetByIdAsync(id);
+        var category = await categoryService.GetByIdAsync(id);
         if (category == null) return NotFound($"Categoria con id {id} no encontrada");
         return Ok(category);
     }
@@ -60,7 +55,7 @@ public class CategoryController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var created = await _CategoryService.CreateAsync(dto);
+        var created = await categoryService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -81,7 +76,7 @@ public class CategoryController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.Name))
             return BadRequest("Debes enviar al menos un campo para actualizar");
 
-        var updated = await _CategoryService.UpdateAsync(id, dto);
+        var updated = await categoryService.UpdateAsync(id, dto);
         if (updated == null) return NotFound($"Categoría con id {id} no encontrada");
         return Ok(updated);
     }
@@ -96,7 +91,7 @@ public class CategoryController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _CategoryService.DeleteAsync(id);
+        var deleted = await categoryService.DeleteAsync(id);
         if (!deleted) return NotFound($"Categoria con id {id} no encontrada");
         return Ok($"Categoria con id {id} eliminado correctamente");
     }

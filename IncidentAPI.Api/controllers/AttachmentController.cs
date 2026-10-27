@@ -5,21 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class AttachmentController : ControllerBase
+public class AttachmentController(
+    IAttachmentService attachmentService, 
+    IWebHostEnvironment env) : ControllerBase
 {
-    private readonly IAttachmentService _attachmentService;
-    private readonly IWebHostEnvironment _env;
 
-    public AttachmentController(IAttachmentService attachmentService, IWebHostEnvironment env)
-    {
-        _attachmentService = attachmentService;
-        _env = env;
-    }
 
     [HttpGet("incident/{incidentId}")]
     public async Task<IActionResult> GetAllByIncidentId(int incidentId)
     {
-        var attachments = await _attachmentService.GetAllByIncidentIdAsync(incidentId, User.GetUserId());
+        var attachments = await attachmentService.GetAllByIncidentIdAsync(incidentId, User.GetUserId());
 
         if(!attachments.Any())
             return Ok("No hay archivos adjuntos para este incidente.");
@@ -30,7 +25,7 @@ public class AttachmentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var attachment = await _attachmentService.GetByIdAsync(id, User.GetUserId());
+        var attachment = await attachmentService.GetByIdAsync(id, User.GetUserId());
 
         if(attachment is null)
             return NotFound("Archivo no encontrado.");
@@ -46,7 +41,7 @@ public class AttachmentController : ControllerBase
             return BadRequest(ModelState);
         
         var baseUrl = $"{Request.Scheme}: //{Request.Host}";
-        var attachment = await _attachmentService.UploadAsync(incidentId, dto, baseUrl, User.GetUserId());
+        var attachment = await attachmentService.UploadAsync(incidentId, dto, baseUrl, User.GetUserId());
 
         if(attachment is null)
             return BadRequest("No se pudo subir el archivo. Verifica que el incidente exista," + 
@@ -59,7 +54,7 @@ public class AttachmentController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _attachmentService.DeleteAsync(id, User.GetUserId());
+        var deleted = await attachmentService.DeleteAsync(id, User.GetUserId());
 
         if(!deleted)
             return NotFound("Archivo no encontrado.");
@@ -71,13 +66,13 @@ public class AttachmentController : ControllerBase
     [HttpGet("{id}/download")]
     public async Task<IActionResult> Download(int id)
     {
-        var attachment = await _attachmentService.GetByIdAsync(id, User.GetUserId());
+        var attachment = await attachmentService.GetByIdAsync(id, User.GetUserId());
 
         if(attachment is null)
             return NotFound("Archivo no encontrado.");
         
         // Bsucar archivo fisico en el disco
-        var filePath = Path.Combine(_env.ContentRootPath, "App_Data", "uploads",
+        var filePath = Path.Combine(env.ContentRootPath, "AppData", "uploads",
             attachment.FileUrl.Contains('/') ? attachment.FileUrl[(attachment.FileUrl.LastIndexOf('/') + 1)..] : attachment.FileUrl);
 
         if(!System.IO.File.Exists(filePath))

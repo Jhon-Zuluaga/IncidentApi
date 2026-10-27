@@ -2,42 +2,31 @@
 using IncidentAPI.Api.Models;
 using IncidentAPI.Api.Repositories.Interfaces;
 
-public class AttachmentService : IAttachmentService
+public class AttachmentService(
+    IAttachmentRepository attachmentRepository,
+    IIncidentRepository incidentRepository,
+    IWebHostEnvironment env) : IAttachmentService
 {
-    private readonly IAttachmentRepository _attachmentRepository;
-    private readonly IIncidentRepository _incidentRepository;
-    private readonly IWebHostEnvironment _env;
-
     private static readonly string[] _allowedTyped =
-        { "image/jpeg", "image/png", "/image/gif", "application/pdf", "text/plain"};
+        { "image/jpeg", "image/png", "image/gif", "application/pdf", "text/plain"};
     private const long _maxFileSize = 5 * 1024 * 1024; // 5MB
-
-    public AttachmentService(
-        IAttachmentRepository attachmentRepository,
-        IIncidentRepository incidentRepository,
-        IWebHostEnvironment env)
-    {
-        _attachmentRepository = attachmentRepository;
-        _incidentRepository = incidentRepository;
-        _env = env;
-    }
 
     public async Task<IEnumerable<AttachmentDto>> GetAllByIncidentIdAsync (int incidentId, int userId)
     {
-        var incident = await _incidentRepository.GetByIdAsync(incidentId);
+        var incident = await incidentRepository.GetByIdAsync(incidentId);
         if(incident is null)
             throw new NotFoundException($"Incident with ID {incidentId} not found.");
         
         if(incident.UserId != userId)
             throw new ForbiddenException("You do not have permission to view the attachments for this incident.");
 
-        var attachments = await _attachmentRepository.GetAllByIncidentIdAsync(incidentId);
+        var attachments = await attachmentRepository.GetAllByIncidentIdAsync(incidentId);
         return attachments. Select(a => ToDto(a));
     }
 
     public async Task<AttachmentDto?> GetByIdAsync(int id, int userId)
     {
-        var attachment = await _attachmentRepository.GetByIdAsync(id);
+        var attachment = await attachmentRepository.GetByIdAsync(id);
         if(attachment is null) return null;
 
         if(attachment.Incident.UserId != userId)
@@ -49,7 +38,7 @@ public class AttachmentService : IAttachmentService
     public async Task<AttachmentDto?> UploadAsync(int incidentId, CreateAttachmentDto dto, string baseUrl, int userId)
     {
         // Verificar que el incidente existe
-        var incident = await _incidentRepository.GetByIdAsync(incidentId);
+        var incident = await incidentRepository.GetByIdAsync(incidentId);
         if(incident is null) return null;
 
         if(incident.UserId != userId)
@@ -66,7 +55,7 @@ public class AttachmentService : IAttachmentService
         var storedFileName = $"{Guid.NewGuid()}{extension}";
 
         // Crear la carpeta uploads si no existe
-        var uploadsFolder = Path.Combine(_env.ContentRootPath, "App_Data", "uploads");
+        var uploadsFolder = Path.Combine(env.ContentRootPath, "App_Data", "uploads");
         Directory.CreateDirectory(uploadsFolder);
 
         // Guardar archivo en disco
@@ -87,14 +76,14 @@ public class AttachmentService : IAttachmentService
             IncidentId = incidentId
         };
 
-        var created = await _attachmentRepository.CreateAsync(attachment);
+        var created = await attachmentRepository.CreateAsync(attachment);
         return ToDto(created, baseUrl);
     }
 
     
     public async Task<bool> DeleteAsync(int id, int userId)
     {
-        var attachment = await _attachmentRepository.GetByIdAsync(id);
+        var attachment = await attachmentRepository.GetByIdAsync(id);
         if(attachment is null) return false;
 
         if(attachment.Incident.UserId != userId)
@@ -104,7 +93,7 @@ public class AttachmentService : IAttachmentService
         if(File.Exists(attachment.FilePath))
             File.Delete(attachment.FilePath);
         
-        return await _attachmentRepository.DeleteAsync(id);
+        return await attachmentRepository.DeleteAsync(id);
     }
 
     public static AttachmentDto ToDto(Attachment attachment, string baseUrl = "")

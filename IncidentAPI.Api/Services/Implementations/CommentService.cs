@@ -14,19 +14,13 @@ namespace IncidentAPI.Api.Services.Implementations;
 */
 
 // Implementacion de la logica de negocio para comentarios
-public class CommentService : ICommentService
+public class CommentService(ICommentRepository commentRepository) : ICommentService
 {
-    private readonly ICommentRepository _commentRepository;
-
-    public CommentService(ICommentRepository commentRepository)
-    {
-        _commentRepository = commentRepository;
-    }
 
     public async Task<IEnumerable<CommentDto>> GetAllByIncidentIdAsync(int incidentId)
     {
         // Obtener comentarios por incidente
-        var comments = await _commentRepository.GetAllByIncidentIdAsync(incidentId);
+        var comments = await commentRepository.GetAllByIncidentIdAsync(incidentId);
 
         // Convertir a DTO
         return comments.Select(c => new CommentDto
@@ -42,7 +36,7 @@ public class CommentService : ICommentService
     public async Task<CommentDto?> GetByIdAsync(int id)
     {
         // Buscar comentario por ID
-        var comment = await _commentRepository.GetByIdAsync(id);
+        var comment = await commentRepository.GetByIdAsync(id);
         if (comment == null) return null;
 
         // Mapear a DTO
@@ -67,7 +61,7 @@ public class CommentService : ICommentService
         };
 
         // Guardar en la BD
-        var created = await _commentRepository.CreateAsync(comment);
+        var created = await commentRepository.CreateAsync(comment);
 
         // Retornar el DTO
         return new CommentDto
@@ -90,7 +84,7 @@ public class CommentService : ICommentService
         };
 
         // Actualizar en BD
-        var updated = await _commentRepository.UpdateAsync(id, comment);
+        var updated = await commentRepository.UpdateAsync(id, comment);
         if (updated == null) return null;
 
         // Retornar DTO
@@ -107,6 +101,6 @@ public class CommentService : ICommentService
     public async Task<bool> DeleteAsync(int id)
     {
         // Eliminar comentario
-        return await _commentRepository.DeleteAsync(id);
+        return await commentRepository.DeleteAsync(id);
     }
 }

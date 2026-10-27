@@ -7,14 +7,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 // Servicio que implementa la generación tokens JWT
-public class JwtService : IJwtService
+public class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 {
-    private readonly JwtOptions _jwtOptions;
-
-    public JwtService(IOptions<JwtOptions> jwtOptions)
-    {
-        _jwtOptions = jwtOptions.Value;
-    }
+    private readonly JwtOptions _jwtOptions = jwtOptions.Value;
 
     public string GenerateToken(User user)
     {

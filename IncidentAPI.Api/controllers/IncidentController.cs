@@ -8,17 +8,12 @@ namespace IncidentAPI.Api.Controllers;
 /// <summary>
 /// Gestión de Incidentes
 /// </summary>
+/// <param name="incidentService">Servicio de incidentes</param>
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class IncidentController : ControllerBase
+public class IncidentController(IIncidentService incidentService) : ControllerBase
 {
-    private readonly IIncidentService _IncidentService;
-
-    public IncidentController(IIncidentService IncidentService)
-    {
-        _IncidentService = IncidentService;
-    }
 
     /// <summary>
     /// Obtiene todos los incidentes
@@ -29,7 +24,7 @@ public class IncidentController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var incidents = await _IncidentService.GetAllAsync();
+        var incidents = await incidentService.GetAllAsync();
         if (!incidents.Any()) return NotFound("No hay información suministrada");
         return Ok(incidents);
     }
@@ -44,7 +39,7 @@ public class IncidentController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var incident = await _IncidentService.GetByIdAsync(id);
+        var incident = await incidentService.GetByIdAsync(id);
         if (incident == null) return NotFound($"Incidente con id {id} no encontrado");
         return Ok(incident);
     }
@@ -60,7 +55,7 @@ public class IncidentController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateIncidentDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var created = await _IncidentService.CreateAsync(dto);
+        var created = await incidentService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -77,7 +72,7 @@ public class IncidentController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateIncidentDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var updated = await _IncidentService.UpdateAsync(id, dto);
+        var updated = await incidentService.UpdateAsync(id, dto);
         if (updated == null) return NotFound($"Incidente con id {id} no encontrado");
         return Ok(updated);
     }
@@ -92,7 +87,7 @@ public class IncidentController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _IncidentService.DeleteAsync(id);
+        var deleted = await incidentService.DeleteAsync(id);
         if (!deleted) return NotFound($"Incidente con id {id} no encontrado");
         return Ok($"Incidente con id {id} eliminado correctamente");
     }

@@ -8,17 +8,12 @@ namespace IncidentAPI.Api.Controllers;
 /// <summary>
 /// Gestión de Usuarios
 /// </summary>
+/// <param name="userService">Servicio de usuarios</param>
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class UserController : ControllerBase
+public class UserController(IUserService userService) : ControllerBase
 {
-    private readonly IUserService _userService;
-
-    public UserController(IUserService userService)
-    {
-        _userService = userService;
-    }
 
     /// <summary>
     /// Obtiene todos los usuarios
@@ -29,7 +24,7 @@ public class UserController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var users = await _userService.GetAllAsync();
+        var users = await userService.GetAllAsync();
         if (!users.Any()) return NotFound("No hay información suministrada");
         return Ok(users);
     }
@@ -44,7 +39,7 @@ public class UserController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var user = await _userService.GetByIdAsync(id);
+        var user = await userService.GetByIdAsync(id);
         if (user == null) return NotFound($"Usuario con id {id} no encontrado");
         return Ok(user);
     }
@@ -61,7 +56,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var created = await _userService.CreateAsync(dto);
+        var created = await userService.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
     }
 
@@ -78,7 +73,7 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
     {
         if (!ModelState.IsValid) return BadRequest(ModelState);
-        var updated = await _userService.UpdateAsync(id, dto);
+        var updated = await userService.UpdateAsync(id, dto);
         if (updated == null) return NotFound($"Usuario con id {id} no encontrado");
         return Ok(updated);
     }
@@ -93,7 +88,7 @@ public class UserController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _userService.DeleteAsync(id);
+        var deleted = await userService.DeleteAsync(id);
         if (!deleted) return NotFound($"Usuario con id {id} no encontrado");
         return Ok($"Usuario con id {id} eliminado correctamente");
     }
